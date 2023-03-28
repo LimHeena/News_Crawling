@@ -26,12 +26,7 @@ class NewsDB:
         인자 : 데이터베이스 접속정보
         """
         global connection
-        connection = pymysql.connect(host="101.101.208.151",
-                             port=3306, 
-                             user="kdt", 
-                             password="kdt1234!@",
-                             database="news_db",
-                             charset="utf8mb4")
+        connection = pymysql.connect()
 
     def __del__(self) -> None:
         """
