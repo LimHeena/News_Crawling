@@ -20,5 +20,5 @@
  2) ERD 설계(팀플)
  ![최종 erd](https://user-images.githubusercontent.com/104770890/228133975-2cdc6d70-58da-4229-a55c-87fd8a43fec3.png)
  3) 데이터베이스에 ERD 바탕으로 테이블 생성
- 
+ 4) 데이터베이스 관리 스켈레톤 코드 만들기
  
