@@ -68,18 +68,6 @@ class NewsDB:
         
         # if 'url' not in list(df.columns):
         #     df['url'] = ""
-            
-        # df_cols = list(df.columns) 
-        
-        # with self.connection.cursor() as cursor:
-        #     cursor.execute('describe news')
-        #     cols = cursor.fetchall()
-        #     cols_list = []
-        #     for col in cols:
-        #         cols_list.append(col[0])
-                
-        #     if sorted(df_cols) != sorted(cols_list):
-        #         raise ValueError('컬럼명 오류!') #에러 발생
 
         table_columns = ['main_category', 'sub_category', 'content', 'platform', 'title', 'writed_at', 'writer']
         
@@ -124,7 +112,7 @@ class NewsDB:
 
             
 
-    def select_news(self, condition): 
+    def select_news(self, start_date=None, end_date=None, main_category=None, sub_category=None, platform=None, writer=None): 
         """
         인자 : 데이터를 꺼내올 때 사용할 parameters
 
@@ -134,94 +122,62 @@ class NewsDB:
 
         DB 액세스를 줄이는 방법도 한번쯤 생각해보면 좋음 (캐싱이라는 개념, *여기서 구현해야하는것은 아님)
         """
-        
+    
         with self.connection.cursor() as cursor:
-            sql_pre = "SELECT DISTINCT * FROM `news`"
+            sql_pre = "SELECT * FROM `news` "
             sql_post = ""
             
-            main_key_list = []
-            main_list = []
-            for key, value in self.MAIN_CATEGORY_DICT.items():
-                main_key_list.append(key)
-                main_list.append((key, value))
-                
-            sub_key_list = []
-            sub_list = []
-            for key, value in self.SUB_CATEGORY_DICT.items():
-                sub_key_list.append(key)
-                sub_list.append((key, value))
+            if start_date and end_date: #날짜
+                sql_post += "WHERE `writed_at` BETWEEN {} AND {} ".format(start_date, end_date)
+            elif start_date:
+                sql_post += "WHERE `writed_at` >= {} ".format(start_date)
+            elif end_date:
+                sql_post += "WHERE `writed_at` <= {} ".format(end_date)
             
-            plat_key_list = []
-            plat_list = []
-            for key, value in self.PLATFORM_DICT.items():
-                plat_key_list.append(key) 
-                plat_list.append((key, value))
+            if main_category: #메인 카테고리
+                main_id = self.MAIN_CATEGORY_DICT[main_category]
+                sql_post += "WHERE `main_id` = '{}' ".format(main_id)
+            
+            if sub_category: #서브 카테고리 
+                sub_id = self.SUB_CATEGORY_DICT[sub_category]
+                sql_post += "WHERE `sub_id` = '{}' ".format(sub_id)
+            
+            if platform: #플랫폼
+                platform_id = self.PLATFORM_DICT[platform]
+                sql_post += "WHERE `platform_id` = '{}' ".format(platform_id)
+            
+            if writer: #기자
+                sql_post += "WHERE `writer` = '{}' ".format(writer)
                    
-            cons = condition.split() #플랫폼, 대분류 (네이버 사회)
-            if len(cons) == 2:
-                if cons[1] in main_key_list:
-                    
-                    sql_post = """ 
-                    INNER JOIN `platform_info` 
-                    ON news.platform_id = platform_info.platform_id 
-                    WHERE `platform_info.name` = '{}'
-                    INNER JOIN `main_category`
-                    On news.main_id = main_category.main_id
-                    WHERE `main_category.name` = '{}' 
-                    LIMIT 10000;
-                    """.format(cons[0], cons[1]) 
-                
-                elif (len(cons[0]) == 23): #날짜 between (2023-03-03 2023-03-28)
-                    sql_post = """
-                    WHERE `writed_at` BETWEEN '{}' AND '{}'
-                    LIMIT 10000;
-                    """.format(cons[0], cons[1])
-                    
-            elif len(cons) == 3:    
-                cons = condition.split() #플랫폼, 대분류, 소분류 (네이버 사회 사건사고)
-                if cons[2] in sub_key_list:
-                    
-                    sql_post = """ 
-                    INNER JOIN `platform_info` 
-                    ON news.platform_id = platform_info.platform_id 
-                    WHERE `platform_info.name` = '{}'
-                    INNER JOIN `main_category`
-                    On news.main_id = main_category.main_id
-                    WHERE `main_category.name` = '{}' 
-                    INNER JOIN `sub_category`
-                    On news.sub_id = sub_category.sub_id
-                    WHERE `sub_category.name` = '{}' 
-                    LIMIT 10000;
-                    """.format(cons[0], cons[1], cons[2]) 
-            elif len(cons) == 1:    
-                if (cons[0] != '네이버') and (cons[0] != '다음'): #기자 이름 (홍길동)
-                    sql_post = """
-                    WHERE `writer` = '{}'
-                    LIMIT 10000;
-                    """.format(cons[0])
-                
-                elif (len(cons[0]) == 19): #날짜 (2023-03-28)
-                    sql_post = """
-                    WHERE `writed_at` = '{}'
-                    LIMIT 10000;
-                    """.format(cons[0])
-
-                elif (cons[0] == 'all'): #모든 컬럼 불러오기(+카테고리, 플랫폼 이름으로)
-                    sql_pre = "SELECT `platform_info.name`, `main_category.name`, `sub_category.name`, `title`, `content`, `writer`,`writed_at` FROM `news`"
-                    sql_post = """ 
-                    INNER JOIN `platform_info` 
-                    ON news.platform_id = platform_info.platform_id 
-                    INNER JOIN `main_category`
-                    On news.main_id = main_category.main_id
-                    INNER JOIN `sub_category`
-                    On news.sub_id = sub_category.sub_id
-                    LIMIT 10000;
-                    """
-            
+            sql_post += "LIMIT 10000"
             sql = sql_pre + sql_post
             cursor.execute(sql)
-            result = cursor.fetchall()
-            return result
+            results = cursor.fetchall()
+            
+
+            my_list=[]
+            for result in results:
+                my_list.append(list(result))
+
+            df = pd.DataFrame(my_list, columns=[ 'news_id','title', 'writer','content',  'writed_at','url','main_category','sub_category', 'platform'])
+            
+            tmp = [l.rstrip().split(',') for l in open('./main_category').readlines()]
+            self.MAIN_CATEGORY_DICT1 = {int(k): v for k, v in tmp}
+            tmp = [l.rstrip().split(',') for l in open('./sub_category').readlines()]
+            self.SUB_CATEGORY_DICT1 = {int(k): v for k, v in tmp}
+            tmp = [l.rstrip().split(',') for l in open('./platform_info').readlines()]
+            self.PLATFORM_DICT1 = {int(k): v for k, v in tmp}
+
+            for index, row in df.iterrows(): #데이터프레임 한 행씩 가져옴
+                row['main_category'] = self.MAIN_CATEGORY_DICT1[row['main_category']]
+                df['main_category'] = row['main_category']
+                row['sub_category'] = self.SUB_CATEGORY_DICT1[row['sub_category']]
+                df['sub_category'] = row['sub_category']
+                row['platform'] = self.PLATFORM_DICT1[row['platform']]    
+                df['platform'] = row['platform']
+            
+               
+            return df
 
 if __name__ == '__main__':
     # 테스트코드 작성
@@ -234,19 +190,6 @@ if __name__ == '__main__':
     mydf = NewsDB() #객체 생성
     mydf.insert_news(df) #데이터베이스에 데이터 삽입
     
-    naver_social = NewsDB()
-    naver_social.select_news('네이버 사회') #네이버 사회 데이터 가져오기 및 출력
-    
-    naver_social_사건사고 = NewsDB()
-    naver_social_사건사고.select_news('네이버 사회 사건사고') #네이버 사회 데이터 가져오기 및 출력
-    
-    홍길동 = NewsDB()
-    홍길동.select_news('홍길동') #홍길동 기자 데이터 가져오기 및 출력
-    
-    one_date = NewsDB()
-    one_date.select_news('2023-03-28') #날짜 데이터 가져오기 및 출력
-    
-    between_date = NewsDB()
-    between_date.select_news('2023-03-03 2023-03-28') #두 날짜 사이 데이터 가져오기 및 출력
-    
-    
+    test = NewsDB()
+    test.select_news(start_date='2023-03-02') #2023-03-02 포함 이후 데이터 가져오기
+    test.select_news(sub_category='교육') #서브 카테고리가 교육인 데이터 가져오기
