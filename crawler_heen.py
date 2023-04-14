@@ -3,27 +3,40 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import time
-from .cleansing import cleansing
+from cleansing import cleansing
+import warnings
+warnings.filterwarnings('ignore')
 
+#----------------------------------------------------------
+# crontab에서 실행 시 경로가 /home/ubuntu로 바뀜
+# 현재 파일의 경로로 수정
+import os
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+print('현재 경로:', os.path.abspath('.'))
+
+#----------------------------------------------------------
 class Crawler:
 
     def __init__(self) -> None:
-        # 마지막 뉴스 url 가져오기
+        # 마지막 뉴스 url dict 가져오기
         with open('./naver_news_url', 'r') as f:
-            self.last_news_url = f.read().strip()
-
-        # 다음뉴스
-        pass
+            tmp = [l.rstrip().split(',') for l in open('./naver_news_url', encoding='utf-8').readlines()]
+            self.SUBCATEGORY_URL = {int(k): v for k, v in tmp}
 
     def naver_crawler(self):
+        
+        # 소요시간 측정
+        import time
+        start_time = time.time()
         
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36'}
 
         sub_category_num = [731,226,227,230,732,283,229,228] #IT/과학 서브카테고리 
 
         news_list = []
+        global sub_num
         for sub_num in sub_category_num:
-
+            
             URL = "https://news.naver.com/main/list.naver?mode=LS2D&mid=shm&sid2={}&sid1=105".format(sub_num) #IT/과학
 
             #총 페이지 수 구하기
@@ -39,21 +52,35 @@ class Crawler:
                 except:
                     break
                 
-            #date는 와일문 돌려서 최근기사부터 시작. last url 저장되어있는 날짜까지...
+            #date는 while문 돌려서 최근기사부터 시작. last url 저장되어있는 날짜에서 중지.
+            global breaker_1 
+            breaker_1 = False
+            global breaker_2 
+            breaker_2 = False
+            
             while True:
+                if breaker_2 == True:
+                    break
                 
                 if page > 2:
                     for_pages = soup.find(class_="paging" )
                     pages = for_pages.find_all('a')
                     plus_page = len(pages) - 1
                 else:
-                    for_pages = soup.find(class_="paging" )
-                    pages = for_pages.find_all('a')
-                    plus_page = len(pages)
+                    try:
+                        for_pages = soup.find(class_="paging" )
+                        pages = for_pages.find_all('a')
+                        plus_page = len(pages)
+                    except:
+                        plus_page = 1
 
                 total_page = page + plus_page
 
                 for page in range(1,total_page+1):
+                    
+                    if breaker_1 == True:
+                        breaker_2 = True
+                        break
 
                     response = requests.get(URL.format(page), headers=headers)    
                     soup = BeautifulSoup(response.text, 'html.parser')
@@ -64,30 +91,24 @@ class Crawler:
                         url_one = li.select_one('dt a[href]').attrs['href'] #기자와 작성시간 알기 위해 기사 링크 추가
                         url_list.append(url_one)
 
-                    #크롤링 할 때 젤 먼저 저장한 url이 가장 최신 뉴스 (옛날 뉴스가 아래로 쌓이니까)
-                    #그럼 어떻게 해야하지../??
-
                     for url in url_list: #한 링크씩 들어가기
 
-                        url = url
                         response = requests.get(url, headers=headers)
                         time.sleep(1.5)
                         soup = BeautifulSoup(response.text, 'html.parser')
                         
-                        news_url = url
-                        if news_url == self.last_news_url: #최신뉴스까지만!
-                            print('최신까지 크롤링 완료')
-                            with open('./naver_news_url', 'w') as f: #마지막 url 저장
-                                f.write(url)
-                            #return news_list #크롤링 종료
+                        self.news_url = url
+                        if self.news_url == self.SUBCATEGORY_URL[sub_num]: #최신뉴스까지만!
+                            print(f'[{SUB_CATEGORY_DICT[sub_num]}] 최신까지 크롤링 완료')
+                            breaker_1 = True
                             break
-                        
+                            
                         news_dict = {}
                         news_dict['platform'] = '네이버'
                         news_dict['main_category'] = 'IT/과학'
                         
                         sub_name = [l.rstrip().split(',') for l in open('./sub_category').readlines()]
-                        SUB_CATEGORY_DICT = {v: k for k, v in sub_name}
+                        SUB_CATEGORY_DICT = {int(k): v for k, v in sub_name}
                         
                         sub_name = SUB_CATEGORY_DICT[sub_num]
                         news_dict['sub_category'] = '{}'.format(sub_name)
@@ -131,13 +152,24 @@ class Crawler:
                                 news_dict['writed_at'] = soup.select_one('.info').text.strip()
 
                         news_list.append(news_dict)
-                        
-    
-    def processing(self, news_list):                    
-        df = pd.DataFrame([news_list[0]])
-        for news in news_list[1:]:
-            df = df.append([news], ignore_index=True)
         
+            df_tmp = pd.DataFrame([news_list[0]])
+            for news in news_list[1:]:
+                df = df_tmp.append([news], ignore_index=True)
+                
+            df.drop_duplicates(['title','content']) #혹시 모를 중복 제거
+            df.sort_values('writed_at')
+            
+            self.SUBCATEGORY_URL[sub_num] = self.news_url
+            
+            with open('./naver_news_url', 'w', encoding='utf-8') as f: #마지막 url 저장
+                for sub_num1, sub_name1 in self.SUBCATEGORY_URL.items():
+                    f.write(f'{sub_num1},{sub_name1}\n')
+        
+        # crontab에서 10분단위 스케줄링, 카테고리 2개의 경우 소요시간 0초
+        print('소요시간 :', int(time.time() - start_time), '초')
+        
+        #데이터프레임 전처리
         ##  [writed_at] YYYY-MM-DD HH:MM:SS 형식으로 변경
         df['writed_at'] = df['writed_at'].str.replace('오후', 'PM')
         df['writed_at'] = df['writed_at'].str.replace('오전', 'AM')
@@ -147,15 +179,16 @@ class Crawler:
         ## [platform] Naver -> 네이버
         df['platform'] = df['platform'].apply(lambda x: x.replace('Naver', '네이버'))
         
-        df['title'] = df['title'].apply(lambda x : x.replace('\n', ' ')[:160])
+        df['title'] = df['title'].apply(lambda x : x.replace('\n', ' ')[:160]) #title 클렌징
         
-        df['content'] = df.apply(lambda x: cleansing(x['content'], x['writer'] if x['writer'] else ''), axis=1)
+        df['content'] = df.apply(lambda x: cleansing(x['content'], x['writer'] if x['writer'] else ''), axis=1) #content 클렌징
         
         df['url'] = ''
                     
         self.news_df = df
-        return df
 
+        return df                            
+        
 
 import pandas as pd
 class DataManager:
@@ -165,24 +198,14 @@ class DataManager:
 
     def __init__(self) -> None:
         # 기존 데이터를 읽어옴
-        self.df = pd.read_csv('./news.txt')
-        pass
+        self.df = pd.read_csv('./news_df.csv')
 
     def add_new_data(self, new_data):
-        self.df = pd.merge([self.df, new_data])
+        df_list = [self.df, new_data]
+        self.df = pd.concat(df_list, ignore_index=True)
         return
     
     def save_data(self, file_path):
         self.df.to_csv(file_path)
+        print('최신뉴스 파일 저장 완료!')
         return
-
-
-if __name__ == '__main__':
-    # 객체지향 프로그래밍 -> 컴포넌트 단위로 관리
-    my_crawler = Crawler()
-    my_crawler.naver_crawler()
-    my_crawler.news 
-
-    my_data_manager = DataManager()
-    my_data_manager.add_new_data(my_crawler.news)
-    my_data_manager.save_data('./news.txt')
