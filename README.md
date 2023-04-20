@@ -26,6 +26,8 @@
  
  1) 크롤링 자동화 코드
  ![크롤링](https://user-images.githubusercontent.com/104770890/232952054-15e773cf-11e6-4a7e-b62d-9f62ef3f6a1d.png)
+![로그](https://user-images.githubusercontent.com/104770890/233257164-eee6b925-6f98-4250-aa76-1d17f7d0a180.png)
  2) 데이터 전처리 및 요약
  3) 메일 코드 작성
- 4) Cron(job scheduler) 이용하여 뉴스 요약 메일 주기적 발송
+ 4) Cron(job scheduler) 이용하여 크롤링 및 뉴스 요약 메일 주기적 발송
+![크론탭](https://user-images.githubusercontent.com/104770890/233257095-033664b8-3ac3-437a-8cc5-44bc66236a0c.png)
