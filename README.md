@@ -2,17 +2,17 @@
 
 ---
 
-#### 팀 프로젝트
-#### 개발 기간: 2023.03.17 - 2023.04.19
+### 팀 프로젝트
+### 개발 기간: 2023.03.17 - 2023.04.19
 
 ---
 
-#### 1. 크롤링(2인)
+### 1. 크롤링(2인)
 
  1) Beautiful Soup으로 크롤링 코드 짜기(개인)
  2) Scrapy로 크롤링 진행(개인+팀플)
 
-#### 2. 데이터베이스(5인)
+### 2. 데이터베이스(5인)
 
  1) 데이터 컬럼 통일(id, platform, main_category, sub_category, title, content, writer, writed_at, url, *writed_at 형식 : 2023-03-17 16:30:45)
  2) ERD 설계(팀플)
@@ -22,7 +22,7 @@
  ![db 스켈레톤 코드](https://user-images.githubusercontent.com/104770890/232951663-3663e3d8-4bef-41bc-9ff1-f904bc7d7f12.png)
  5) 데이터베이스에 데이터 삽입
  
- #### 3. 뉴스 요약 자동화(2인)
+ ### 3. 뉴스 요약 자동화(2인)
  
  1) 크롤링 자동화 코드
  ![크롤링](https://user-images.githubusercontent.com/104770890/232952054-15e773cf-11e6-4a7e-b62d-9f62ef3f6a1d.png)
