@@ -31,3 +31,4 @@
  3) 메일 코드 작성
  4) Cron(job scheduler) 이용하여 크롤링 및 뉴스 요약 메일 주기적 발송
 ![크론탭](https://user-images.githubusercontent.com/104770890/233257095-033664b8-3ac3-437a-8cc5-44bc66236a0c.png)
+![20230425_131228](https://user-images.githubusercontent.com/104770890/234172705-15043131-2e27-4b9f-8bd9-5825b4db0ee5.png)
