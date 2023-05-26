@@ -2,8 +2,8 @@
 
 ---
 
-### 팀 프로젝트
-### 개발 기간: 2023.03.17 - 2023.04.19
+#### 팀 프로젝트
+#### 개발 기간: 2023.03.17 - 2023.04.19
 
 #### 📜[Notion](https://www.notion.so/News-Project-aff902b8d9474c49bcfe06b151c93f46)
 #### 🖥️[DB Github](https://github.com/kdt-service/AutoNewsDB)
